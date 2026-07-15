@@ -1,0 +1,17 @@
+# Build output
+target/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+
+# Local environment / secrets
+.env
+
+# Personal notes and Claude instructions (kept local)
+docs/
+CLAUDE.md
