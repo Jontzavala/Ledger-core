@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 21 (Corretto) with Maven cache
+        uses: actions/setup-java@v5
+        with:
+          distribution: corretto
+          java-version: '21'
+          cache: maven
+
+      - name: Build and test
+        run: ./mvnw --batch-mode verify
