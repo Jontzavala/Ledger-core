@@ -56,6 +56,19 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Flyway: versioned SQL schema migrations, run automatically at startup.
+             Boot 4 modularized auto-config: the starter (not bare flyway-core) is required. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
+        </dependency>
+
+        <!-- Flyway PostgreSQL support (split out of flyway-core since Flyway 10) -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+
         <!-- ===== Test scope ===== -->
 
         <!-- spring-boot-starter-test: JUnit 5, Mockito, AssertJ, MockMvc -->
