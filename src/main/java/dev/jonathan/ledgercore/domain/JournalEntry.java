@@ -13,7 +13,7 @@ public class JournalEntry {
     private Long id;
 
     @Column(name = "description", nullable = false)
-    private String name;
+    private String description;
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
