@@ -18,4 +18,14 @@ public class Account {
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 
+    public Account(String name) {
+        this.name = name;
+    }
+
+    protected Account() {
+    }
+
+    public Long getId() {
+        return id;
+    }
 }

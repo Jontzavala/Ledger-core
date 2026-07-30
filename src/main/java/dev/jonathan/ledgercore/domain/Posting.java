@@ -21,4 +21,16 @@ public class Posting {
     @Column(name = "amount", nullable = false)
     private Long amount;
 
+    protected Posting() {
+    }
+
+    public Posting(JournalEntry entry, Account account, Long amount) {
+        this.entry = entry;
+        this.account = account;
+        this.amount = amount;
+    }
+
+    public Long getAmount() {
+        return amount;
+    }
 }

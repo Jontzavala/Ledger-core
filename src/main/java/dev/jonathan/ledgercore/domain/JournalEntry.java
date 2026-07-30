@@ -18,4 +18,14 @@ public class JournalEntry {
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 
+    protected JournalEntry() {
+    }
+
+    public JournalEntry(String description) {
+        this.description = description;
+    }
+
+    public Long getId() {
+        return id;
+    }
 }
