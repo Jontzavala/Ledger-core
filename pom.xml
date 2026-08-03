@@ -71,10 +71,17 @@
 
         <!-- ===== Test scope ===== -->
 
-        <!-- spring-boot-starter-test: JUnit 5, Mockito, AssertJ, MockMvc -->
+        <!-- spring-boot-starter-test: JUnit 5, Mockito, AssertJ -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- MockMvc test slice (@AutoConfigureMockMvc, @WebMvcTest): its own module in Boot 4 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-webmvc-test</artifactId>
             <scope>test</scope>
         </dependency>
 
