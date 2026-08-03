@@ -28,4 +28,12 @@ public class JournalEntry {
     public Long getId() {
         return id;
     }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public OffsetDateTime getCreatedAt() {
+        return createdAt;
+    }
 }
