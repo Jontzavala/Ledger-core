@@ -1,0 +1,1 @@
+ALTER TABLE idempotency_keys ALTER COLUMN request_hash TYPE VARCHAR(64);
