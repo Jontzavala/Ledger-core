@@ -2,6 +2,7 @@ package dev.jonathan.ledgercore.controller;
 
 import dev.jonathan.ledgercore.domain.Account;
 import dev.jonathan.ledgercore.repository.AccountRepository;
+import dev.jonathan.ledgercore.repository.IdempotencyKeyRepository;
 import dev.jonathan.ledgercore.repository.JournalEntryRepository;
 import dev.jonathan.ledgercore.repository.PostingRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,12 +42,16 @@ class LedgerControllerTest {
     @Autowired
     PostingRepository postingRepository;
 
+    @Autowired
+    IdempotencyKeyRepository idempotencyKeyRepository;
+
     Account alice;
     Account bob;
 
     @BeforeEach
     void setUp() {
-        // Children before parents: postings reference both entries and accounts.
+        // Children before parents: keys reference entries; postings reference entries and accounts.
+        idempotencyKeyRepository.deleteAll();
         postingRepository.deleteAll();
         entryRepository.deleteAll();
         accountRepository.deleteAll();
@@ -58,6 +63,7 @@ class LedgerControllerTest {
     @Test
     void postingBalancedEntryReturns201() throws Exception {
         mockMvc.perform(post("/api/entries")
+                        .header("Idempotency-Key", "test-key-balanced-1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"description\":\"test\",\"legs\":[{\"accountId\":" + alice.getId() +
                                 ",\"amount\":-1000},{\"accountId\":" + bob.getId() + ",\"amount\":1000}]}"))
@@ -67,6 +73,7 @@ class LedgerControllerTest {
     @Test
     void postingUnbalancedEntryReturns400() throws Exception {
         mockMvc.perform(post("/api/entries")
+                        .header("Idempotency-Key", "test-key-balanced-2")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"description\":\"test\",\"legs\":[{\"accountId\":" + alice.getId() +
                                 ",\"amount\":-1000},{\"accountId\":" + bob.getId() + ",\"amount\":999}]}"))
