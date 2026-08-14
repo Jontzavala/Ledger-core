@@ -7,7 +7,7 @@
 ## Overview
 
 ledger-core is a double-entry ledger service. A caller posts a journal entry describing a movement of money between
-accounts, and the entry's postings must sum to zero — money leaving one account always arrives somewhere else.
+accounts, and the entry's postings must sum to zero: money leaving one account always arrives somewhere else.
 
 Systems that store account balances directly can drift: a bug or a retried request updates one balance and not the
 other, and the discrepancy only surfaces later during reconciliation. Here, balances are derived by summing postings,
@@ -33,14 +33,14 @@ flowchart TB
         advice["<b>GlobalExceptionHandler</b><br/>IllegalArgumentException<br/>MethodArgumentNotValidException<br/>MissingRequestHeaderException → 400 ApiError<br/>IdempotencyConflictException → 409 ApiError"]
         service["<b>LedgerService</b><br/>postEntry · postEntryIdempotent<br/>@Transactional"]
         hasher["<b>RequestHasher</b><br/>SHA-256 over description + legs"]
-        repos["<b>Spring Data JPA repositories</b><br/>Account · JournalEntry · Posting<br/>IdempotencyKey — insertIfAbsent"]
+        repos["<b>Spring Data JPA repositories</b><br/>Account · JournalEntry · Posting<br/>IdempotencyKey: insertIfAbsent"]
     end
 
     subgraph db["PostgreSQL 16"]
         direction TB
         tables[("accounts · journal_entries<br/>postings · idempotency_keys")]
 
-        subgraph enforcement["Invariant enforcement — database level"]
+        subgraph enforcement["Invariant enforcement: database level"]
             direction TB
             trg1["CONSTRAINT TRIGGER postings_balanced<br/>DEFERRABLE INITIALLY DEFERRED<br/>sum of amount per entry = 0"]
             trg2["TRIGGER postings_entry_id_immutable<br/>BEFORE UPDATE OF entry_id"]
@@ -67,8 +67,8 @@ check are all enforced by PostgreSQL, not by Java.
 
 ## Invariants
 
-These guarantees live in PostgreSQL rather than in application code. Java validation only covers the path it runs on a
-raw SQL fix, an admin script, or a future service writing directly all bypass it, while a database constraint holds no
+These guarantees live in PostgreSQL rather than in application code. Java validation only covers the path it runs on:
+a raw SQL fix, an admin script, or a future service writing directly all bypass it, while a database constraint holds no
 matter how the write arrives. LedgerService still validates first, so honest callers get a clear 400 instead of a
 constraint violation, but the database is what makes corruption impossible rather than merely unlikely.
 
@@ -110,7 +110,7 @@ header is required. (Actuator additionally exposes `/actuator/health` and
 with a non-null `accountId` and `amount`. Amounts are `BIGINT` and must sum to
 zero across the legs.
 
-Accounts must already exist — there is no account-creation endpoint. Insert them
+Accounts must already exist; there is no account-creation endpoint. Insert them
 directly:
 
 ```bash
@@ -118,7 +118,7 @@ docker compose exec postgres psql -U ledger_user -d ledger \
   -c "INSERT INTO accounts (name) VALUES ('alice'), ('bob') RETURNING id, name;"
 ```
 
-### 201 — entry created
+### 201: entry created
 
 First request with a given key:
 
@@ -136,7 +136,7 @@ Content-Type: application/json
 {"id":2,"description":"August rent"}
 ```
 
-### 200 — identical retry replays the original entry
+### 200: identical retry replays the original entry
 
 Same key, same payload. No new entry is created; the stored one is returned.
 
@@ -156,7 +156,7 @@ Content-Type: application/json
 
 The `id` is identical to the 201 response.
 
-### 409 — key reused with a different payload
+### 409: key reused with a different payload
 
 Same key, different legs. The stored SHA-256 request hash does not match.
 
@@ -175,12 +175,12 @@ Content-Type: application/json
 ```
 
 `409 IDEMPOTENCY_CONFLICT` is also returned when a request with the same key is
-still in flight — the key row exists but its `entry_id` has not been set yet.
+still in flight: the key row exists but its `entry_id` has not been set yet.
 
-### 400 — validation failure
+### 400: validation failure
 
-Every 400 returns the same `ApiError` body — `{"code": "INVALID_REQUEST",
-"message": …}` — whether the request was rejected by bean validation before the
+Every 400 returns the same `ApiError` body, `{"code": "INVALID_REQUEST",
+"message": …}`, whether the request was rejected by bean validation before the
 controller method ran or by `LedgerService` inside it. `GlobalExceptionHandler`
 maps `MethodArgumentNotValidException`, `MissingRequestHeaderException`, and
 `IllegalArgumentException` to that one shape.
@@ -247,17 +247,17 @@ default to the `docker-compose.yml` values and can be overridden with
 
 ## Testing
 
-`./mvnw verify` runs four test classes, seven tests. Every class starts a
+`./mvnw verify` runs four test classes, eight tests. Every class starts a
 throwaway Postgres 16 container via Testcontainers (`@ServiceConnection`), so
 Docker is the only prerequisite: no local database setup, and the CI workflow
-declares no service container — it just runs `./mvnw --batch-mode verify`.
+declares no service container; it just runs `./mvnw --batch-mode verify`.
 
-| Test class                   | Verifies                                                                                                                                                                                                             |
-|------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `LedgerCoreApplicationTests` | The Spring context loads against a real Postgres container, which exercises Flyway migration and `ddl-auto: validate` entity mapping.                                                                                |
-| `LedgerServiceTest`          | A balanced entry persists with all its postings and the amounts sum to zero; legs not summing to zero are rejected with `IllegalArgumentException`; fewer than two legs is rejected with `IllegalArgumentException`. |
-| `LedgerControllerTest`       | End-to-end through MockMvc: a balanced entry returns `201`; an unbalanced entry returns `400` with `code` = `INVALID_REQUEST`.                                                                                       |
-| `IdempotencyConcurrencyTest` | Idempotency under concurrent duplicate requests (below).                                                                                                                                                             |
+| Test class                   | Verifies                                                                                                                                                                                                                                                                       |
+|------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `LedgerCoreApplicationTests` | The Spring context loads against a real Postgres container, which exercises Flyway migration and `ddl-auto: validate` entity mapping.                                                                                                                                          |
+| `LedgerServiceTest`          | A balanced entry persists with all its postings and the amounts sum to zero; legs not summing to zero are rejected with `IllegalArgumentException`; fewer than two legs is rejected with `IllegalArgumentException`.                                                           |
+| `LedgerControllerTest`       | End-to-end through MockMvc: a balanced entry returns `201`; an unbalanced entry returns `400` with `code` = `INVALID_REQUEST`; a request with no `Idempotency-Key` header returns `400` with `code` = `INVALID_REQUEST`, covering the `MissingRequestHeaderException` handler. |
+| `IdempotencyConcurrencyTest` | Idempotency under concurrent duplicate requests (below).                                                                                                                                                                                                                       |
 
 ### Concurrency test
 
@@ -273,7 +273,7 @@ exceptions are collected separately in `CopyOnWriteArrayList`s.
 It asserts one row in `journal_entries`, two in `postings`, one in
 `idempotency_keys`, and exactly one result with `created() == true`.
 
-Observed on a local run: **50 successful results — 1 created, 49 replayed, 0 failures.**
+Observed on a local run: **50 successful results; 1 created, 49 replayed, 0 failures.**
 
 The test establishes that duplicate requests to a single instance produce exactly one entry. It doesn't prove
 correctness in general. Fifty threads share a connection pool that maxes at ten, so contention is real but bounded, and
@@ -308,7 +308,7 @@ posting of a three-leg entry, the total is whatever that leg was.
 So the check is a deferred constraint trigger: DEFERRABLE INITIALLY DEFERRED, evaluated at commit against the
 transaction's final state. Intermediate imbalance is allowed; a transaction that ends unbalanced is rejected.
 
-It fires on INSERT, UPDATE, and DELETE. DELETE matters, without it, removing one leg of a balanced entry would silently
+It fires on INSERT, UPDATE, and DELETE. DELETE matters: without it, removing one leg of a balanced entry would silently
 create money. On DELETE there is no NEW row, so the trigger resolves the entry via COALESCE(NEW.entry_id, OLD.entry_id).
 
 The trade-off is that violations surface at commit rather than at the offending statement, so callers can't attribute
@@ -328,12 +328,13 @@ row count instead of raising, and the transaction stays usable.
 
 A count of 1 means this caller claimed the key: create the entry, link it to the key row, return 201. A count of 0 means
 the key already existed, and the stored SHA-256 hash of the request payload decides what happens next. A matching hash
-is an honest retry 200 with the original entry, nothing created. A different hash means the key was reused for different
+is an honest retry: 200 with the original entry, nothing created. A different hash means the key was reused for
+different
 content, which is a client error: 409. Without the hash, that case would return 200 and the original entry, and the
-client would believe a different transfer had succeeded not duplicated money, but misattributed money.
+client would believe a different transfer had succeeded: not duplicated money, but misattributed money.
 
 There is one narrow window: a duplicate that reads the key row before the winner has linked its entry. That returns 409
-with a distinct message. In the 50-thread concurrency test it never fired, Postgres blocks the second inserter on the
+with a distinct message. In the 50-thread concurrency test it never fired: Postgres blocks the second inserter on the
 conflicting tuple until the winner commits, so all 49 duplicates saw a linked entry and replayed cleanly.
 
 ## Project structure
@@ -355,19 +356,19 @@ src/main/resources/
 |--------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `controller`             | `LedgerController` (`POST /api/entries`), the request/response DTOs `CreateEntryRequest` (with nested `LegLine`, Jakarta Validation annotated) and `CreateEntryResponse`, the `ApiError` error body, and `GlobalExceptionHandler` mapping `IllegalArgumentException`, `MethodArgumentNotValidException`, and `MissingRequestHeaderException` → 400 and `IdempotencyConflictException` → 409, all as `ApiError`. |
 | `domain`                 | JPA entities mapped to the existing Flyway-managed tables: `Account`, `JournalEntry`, `Posting`, `IdempotencyKey`. All use `@GeneratedValue(strategy = IDENTITY)` against `GENERATED ALWAYS AS IDENTITY` columns.                                                                                                                                                                                               |
-| `repository`             | Spring Data JPA repositories: `AccountRepository`, `JournalEntryRepository`, `PostingRepository`, and `IdempotencyKeyRepository` — the last adding `findByIdempotencyKey` and the native `insertIfAbsent` upsert.                                                                                                                                                                                               |
+| `repository`             | Spring Data JPA repositories: `AccountRepository`, `JournalEntryRepository`, `PostingRepository`, and `IdempotencyKeyRepository`, the last adding `findByIdempotencyKey` and the native `insertIfAbsent` upsert.                                                                                                                                                                                                |
 | `service`                | `LedgerService` (`postEntry`, `postEntryIdempotent`, both `@Transactional`), the `LegRequest` and `PostResult` records, `RequestHasher` (SHA-256 hex over description and legs), and `IdempotencyConflictException`.                                                                                                                                                                                            |
 | `resources/db/migration` | Flyway SQL migrations, applied automatically at startup.                                                                                                                                                                                                                                                                                                                                                        |
 
 ## Schema history
 
-| Migration                                   | What it did                                                                                                                                                                                                                                        |
-|---------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `V1__create_ledger_tables.sql`              | Created `accounts`, `journal_entries`, and `postings`. Postings carry `entry_id` and `account_id` foreign keys and a `BIGINT amount`. No balance column anywhere — balances are derived from postings.                                             |
-| `V2__enforce_balanced_entries.sql`          | Added the `check_postings_balanced()` plpgsql function and the `postings_balanced` constraint trigger — `AFTER INSERT OR UPDATE OR DELETE`, `DEFERRABLE INITIALLY DEFERRED`, `FOR EACH ROW` — raising when an entry's postings do not sum to zero. |
-| `V3__forbid_posting_entry_reassignment.sql` | Added the `freeze_entry_id()` function and the `postings_entry_id_immutable` trigger (`BEFORE UPDATE OF entry_id`), raising when a posting's `entry_id` would change.                                                                              |
-| `V4__add_idempotency_keys.sql`              | Created `idempotency_keys` with a `UNIQUE NOT NULL idempotency_key`, a nullable `entry_id` foreign key to `journal_entries`, `created_at`, and a `CHAR(64) request_hash`.                                                                          |
-| `V5__change_request_hash_to_varchar.sql`    | Changed `request_hash` from `CHAR(64)` to `VARCHAR(64)`.                                                                                                                                                                                           |
+| Migration                                   | What it did                                                                                                                                                                                                                                       |
+|---------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `V1__create_ledger_tables.sql`              | Created `accounts`, `journal_entries`, and `postings`. Postings carry `entry_id` and `account_id` foreign keys and a `BIGINT amount`. No balance column anywhere; balances are derived from postings.                                             |
+| `V2__enforce_balanced_entries.sql`          | Added the `check_postings_balanced()` plpgsql function and the `postings_balanced` constraint trigger (`AFTER INSERT OR UPDATE OR DELETE`, `DEFERRABLE INITIALLY DEFERRED`, `FOR EACH ROW`), raising when an entry's postings do not sum to zero. |
+| `V3__forbid_posting_entry_reassignment.sql` | Added the `freeze_entry_id()` function and the `postings_entry_id_immutable` trigger (`BEFORE UPDATE OF entry_id`), raising when a posting's `entry_id` would change.                                                                             |
+| `V4__add_idempotency_keys.sql`              | Created `idempotency_keys` with a `UNIQUE NOT NULL idempotency_key`, a nullable `entry_id` foreign key to `journal_entries`, `created_at`, and a `CHAR(64) request_hash`.                                                                         |
+| `V5__change_request_hash_to_varchar.sql`    | Changed `request_hash` from `CHAR(64)` to `VARCHAR(64)`.                                                                                                                                                                                          |
 
 ## Deliberately not built
 
@@ -380,9 +381,8 @@ volume; at this scale a cleanup job would be machinery serving a problem that do
 operation it protects, since a retry usually arrives because the first attempt succeeded and the response was lost, so
 deleting on completion is the one thing that can't be done.
 
-Webhook delivery, observability, and reconciliation. Planned as later milestones and consciously cut. The ledger and
-idempotency work carries the design story; further milestones would have added volume without adding much that a reader
-learns something new from.
+Webhook delivery, observability, and reconciliation. Out of scope. The ledger and idempotency work covers the design
+ground this project set out to explore, and these would be more building than learning.
 
 Known enforcement boundaries. The balance trigger is a row-level trigger, so TRUNCATE bypasses it, and replication or a
 restore running with triggers disabled can insert rows without checks. An entry with no postings, or a single posting of

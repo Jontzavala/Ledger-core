@@ -71,6 +71,16 @@ class LedgerControllerTest {
     }
 
     @Test
+    void postingWithoutIdempotencyKeyHeaderReturns400() throws Exception {
+        mockMvc.perform(post("/api/entries")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"description\":\"test\",\"legs\":[{\"accountId\":" + alice.getId() +
+                                ",\"amount\":-1000},{\"accountId\":" + bob.getId() + ",\"amount\":1000}]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+    }
+
+    @Test
     void postingUnbalancedEntryReturns400() throws Exception {
         mockMvc.perform(post("/api/entries")
                         .header("Idempotency-Key", "test-key-balanced-2")
