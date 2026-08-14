@@ -55,10 +55,10 @@ flowchart TB
     service --> repos
     repos -->|" JDBC "| tables
     tables -.->|" every write checked by<br/>RAISE EXCEPTION on violation "| enforcement
-    classDef dbLayer fill: #e8f0fe, stroke: #3b6ea5, color: #12243a
-    classDef guard fill: #fdecea, stroke: #c0392b, color: #3a1210
+    classDef dbLayer fill:#e8f0fe,stroke:#3b6ea5,color:#12243a
+    classDef guard fill:#fdecea,stroke:#c0392b,color:#3a1210
     class tables dbLayer
-class trg1, trg2, uniq guard
+    class trg1,trg2,uniq guard
 ```
 
 The trigger and constraint layer sits below the application: the sum-to-zero
