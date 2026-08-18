@@ -13,5 +13,8 @@ target/
 .env
 
 # Personal notes and Claude instructions (kept local)
-docs/
+# docs/* rather than docs/ so the ADRs below can be re-included;
+# git cannot un-ignore a path whose parent directory is itself ignored.
+docs/*
+!docs/adr/
 CLAUDE.md

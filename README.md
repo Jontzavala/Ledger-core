@@ -386,8 +386,7 @@ ground this project set out to explore, and these would be more building than le
 
 Known enforcement boundaries. The balance trigger is a row-level trigger, so TRUNCATE bypasses it, and replication or a
 restore running with triggers disabled can insert rows without checks. An entry with no postings, or a single posting of
-zero, satisfies sum-to-zero and is considered valid. These are documented in
-docs/notes/constraint-trigger-limitations.md.
+zero, satisfies sum-to-zero and is considered valid.
 
 Authentication, a UI, and multi-currency. Out of scope from the start. None of them would change what the project
 demonstrates.
